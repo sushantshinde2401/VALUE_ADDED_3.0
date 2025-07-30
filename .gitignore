@@ -18,6 +18,13 @@
 .env.test.local
 .env.production.local
 
+# sensitive files
+backend/credentials.json
+backend/token.json
+
+# installers
+*.exe
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
