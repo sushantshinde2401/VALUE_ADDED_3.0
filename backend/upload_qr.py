@@ -7,6 +7,10 @@ import base64
 from werkzeug.utils import secure_filename
 import datetime
 import uuid
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Optional Google Drive imports
 try:
@@ -21,10 +25,21 @@ except ImportError:
 app = Flask(__name__)
 CORS(app)
 
-# Configuration
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
-UPLOAD_FOLDER = 'uploads'
-STATIC_FOLDER = 'static'
+# Configuration from environment variables
+SCOPES = [os.getenv('GOOGLE_DRIVE_SCOPES', 'https://www.googleapis.com/auth/drive.file')]
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
+STATIC_FOLDER = os.getenv('STATIC_FOLDER', 'static')
+CREDENTIALS_FILE = os.getenv('GOOGLE_DRIVE_CREDENTIALS_FILE', 'credentials.json')
+TOKEN_FILE = os.getenv('GOOGLE_DRIVE_TOKEN_FILE', 'token.json')
+SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE', 'service-account.json')
+MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', '50000000'))  # 50MB default
+ALLOWED_EXTENSIONS = set(os.getenv('ALLOWED_EXTENSIONS', 'pdf,jpg,jpeg,png,doc,docx').split(','))
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
+
+# QR Code Configuration
+QR_VERSION = int(os.getenv('QR_VERSION', '1'))
+QR_BOX_SIZE = int(os.getenv('QR_BOX_SIZE', '10'))
+QR_BORDER = int(os.getenv('QR_BORDER', '4'))
 
 # Create necessary directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -37,58 +52,48 @@ def get_drive_service():
         
     creds = None
     try:
-        # Try service account first (no OAuth required)
-        if os.path.exists('service-account.json'):
-            print("[INFO] Using service account authentication")
-            from google.oauth2 import service_account
-            creds = service_account.Credentials.from_service_account_file(
-                'service-account.json', scopes=SCOPES)
-            print("[OK] Service account credentials loaded")
-            return build('drive', 'v3', credentials=creds)
-        
-        # Fallback to OAuth flow
+        # Load existing token
         if os.path.exists('token.json'):
             creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-            print("[OK] Using existing token.json")
-        else:
-            if not os.path.exists('credentials.json'):
-                raise Exception("credentials.json not found")
-            print("[WARNING] No token.json found, starting OAuth flow...")
-            print("[INFO] If you get 'access blocked' error, add yourself as test user in Google Cloud Console")
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-            with open('token.json', 'w') as token:
-                token.write(creds.to_json())
-            print("[OK] New token.json created")
+            print("[OK] Loaded existing token.json")
         
-        # Check if credentials are valid
+        # If no valid credentials, start OAuth flow
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 print("[INFO] Refreshing expired credentials...")
                 try:
                     from google.auth.transport.requests import Request
                     creds.refresh(Request())
+                    print("[OK] Credentials refreshed successfully")
+                    # Save refreshed token
                     with open('token.json', 'w') as token:
                         token.write(creds.to_json())
-                    print("[OK] Credentials refreshed")
                 except Exception as refresh_error:
-                    print(f"[ERROR] Failed to refresh credentials: {str(refresh_error)}")
-                    print("[INFO] Removing invalid token, will need to re-authenticate")
-                    if os.path.exists('token.json'):
-                        os.remove('token.json')
-                    # Start fresh OAuth flow
+                    print(f"[ERROR] Failed to refresh: {refresh_error}")
+                    print("[INFO] Starting fresh OAuth flow...")
                     if not os.path.exists('credentials.json'):
                         raise Exception("credentials.json not found")
-                    print("[WARNING] Starting fresh OAuth flow...")
                     flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
                     creds = flow.run_local_server(port=0)
                     with open('token.json', 'w') as token:
                         token.write(creds.to_json())
-                    print("[OK] New token.json created")
+                    print("[OK] New token created")
             else:
-                raise Exception("Invalid credentials")
-                
-        return build('drive', 'v3', credentials=creds)
+                print("[INFO] Starting OAuth flow...")
+                if not os.path.exists('credentials.json'):
+                    raise Exception("credentials.json not found")
+                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+                creds = flow.run_local_server(port=0)
+                with open('token.json', 'w') as token:
+                    token.write(creds.to_json())
+                print("[OK] OAuth completed")
+        
+        # Build and return Drive service
+        print("[INFO] Building Drive service...")
+        service = build('drive', 'v3', credentials=creds)
+        print("[OK] Drive service created successfully")
+        return service
+        
     except Exception as e:
         print(f"[ERROR] Error in get_drive_service: {str(e)}")
         raise
@@ -166,10 +171,10 @@ def generate_qr_base64(link):
     try:
         print(f"[INFO] Generating QR code for: {link}")
         qr = qrcode.QRCode(
-            version=1,
+            version=QR_VERSION,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
+            box_size=QR_BOX_SIZE,
+            border=QR_BORDER,
         )
         qr.add_data(link)
         qr.make(fit=True)
@@ -185,6 +190,15 @@ def generate_qr_base64(link):
     except Exception as e:
         print(f"[ERROR] Error in generate_qr_base64: {str(e)}")
         raise
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_file_size(file_bytes):
+    """Check if file size is within allowed limit"""
+    return len(file_bytes) <= MAX_FILE_SIZE
 
 @app.route('/upload', methods=['POST'])
 def upload_pdf():
@@ -206,6 +220,11 @@ def upload_pdf():
     if not filename:
         filename = "certificate.pdf"  # Fallback filename
     
+    # Validate file extension
+    if not allowed_file(filename):
+        print(f"[ERROR] File type not allowed: {filename}")
+        return jsonify({"error": f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+    
     print(f"[INFO] Processing file: {filename}")
     
     try:
@@ -215,9 +234,19 @@ def upload_pdf():
             print("[ERROR] Empty file received")
             return jsonify({"error": "Empty file received"}), 400
         
+        # Validate file size
+        if not validate_file_size(pdf_bytes):
+            print(f"[ERROR] File too large: {len(pdf_bytes)} bytes (max: {MAX_FILE_SIZE})")
+            return jsonify({"error": f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"}), 400
+        
         print(f"[INFO] File size: {len(pdf_bytes)} bytes")
         
         # Try to upload to Google Drive first
+        print(f"[DEBUG] Checking Google Drive availability...")
+        print(f"[DEBUG] GOOGLE_DRIVE_AVAILABLE: {GOOGLE_DRIVE_AVAILABLE}")
+        print(f"[DEBUG] credentials.json exists: {os.path.exists('credentials.json')}")
+        print(f"[DEBUG] token.json exists: {os.path.exists('token.json')}")
+        
         try:
             drive_link = upload_to_drive(pdf_bytes, filename)
             
@@ -265,8 +294,15 @@ def serve_file(filename):
         return jsonify({"error": "File not found"}), 404
 
 if __name__ == '__main__':
-    print("[INFO] Starting Flask server for Certificate Management System")
-    print("[INFO] Server will run on: http://localhost:5000")
-    print("[INFO] Upload endpoint: http://localhost:5000/upload")
+    # Get Flask configuration from environment variables
+    flask_host = os.getenv('FLASK_HOST', '0.0.0.0')
+    flask_port = int(os.getenv('FLASK_PORT', '5000'))
+    flask_debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+    app_name = os.getenv('APP_NAME', 'Certificate Management System')
+    
+    print(f"[INFO] Starting Flask server for {app_name}")
+    print(f"[INFO] Server will run on: http://{flask_host}:{flask_port}")
+    print(f"[INFO] Upload endpoint: {BASE_URL}/upload")
+    print(f"[INFO] Debug mode: {flask_debug}")
     print("\n" + "="*50)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host=flask_host, port=flask_port, debug=flask_debug)

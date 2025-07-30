@@ -21,6 +21,8 @@
 # sensitive files
 backend/credentials.json
 backend/token.json
+backend/.env
+.env
 
 # installers
 *.exe
