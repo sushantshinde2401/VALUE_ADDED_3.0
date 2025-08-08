@@ -89,7 +89,7 @@ function DualCertificate4() {
             <LogOut size={14} /> Logout
           </button>
 
-          <button onClick={() => navigate('/dual-certificate-3')} className="hover:underline flex items-center gap-1 text-sm">
+          <button onClick={() => navigate('/course-preview')} className="hover:underline flex items-center gap-1 text-sm">
             <ArrowLeft size={14} /> Back
           </button>
 

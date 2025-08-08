@@ -30,3 +30,9 @@ backend/.env
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# uploads
+/uploads
+
+# custom sensitive files
+backend/service-account.json

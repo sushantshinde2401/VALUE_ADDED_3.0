@@ -27,7 +27,7 @@ function HomePage() {
   return (
     <div
       className="min-h-screen bg-cover bg-center relative"
-      style={{ backgroundImage: "url('/static/Home-bg.jpg')" }}
+      style={{ backgroundImage: "url('/static/homeshiping.jpg')" }}
     >
       {/* Overlay (optional) */}
       <div className="absolute inset-0 bg-black bg-opacity-40 z-0" />
@@ -54,7 +54,7 @@ function HomePage() {
             className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-xl transition-all duration-300"
           >
             <motion.button
-              onClick={() => navigate('/course-selection')}
+              onClick={() => navigate('/upload-docx')}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300 }}

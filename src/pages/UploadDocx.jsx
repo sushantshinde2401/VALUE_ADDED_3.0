@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   UploadCloud,
   ImageUp,
@@ -8,38 +8,42 @@ import {
   FileImage,
   IdCard,
   FileCheck,
-} from 'lucide-react';
-import { motion } from 'framer-motion';
+  LogOut,
+  ArrowRightCircle,
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 function UploadDocx() {
   const navigate = useNavigate();
 
   return (
     <motion.div
-      
-      className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300"
+      style={{
+        backgroundImage: "url('/static/Uploadpage-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+      className="min-h-screen dark:bg-gray-900 transition-colors duration-300"
     >
-      {/* Fixed Navbar */}
-<motion.div
-  className="fixed top-0 left-0 right-0 h-[70px] z-50 flex items-center justify-between px-6 bg-[#0b2545] text-white shadow-md"
->
-  <img src="static/logo.png" alt="Logo" className="h-20" />
-  <div className="flex gap-4 items-center text-sm">
-    <button onClick={() => navigate('/')} className="hover:underline">
-      Logout
-    </button>
-    <button onClick={() => navigate('/course-selection')} className="hover:underline">
-      Back
-    </button>
-    <button
-      onClick={() => navigate('/candidate-details')}
-      className="hover:text-[#fcd34d] text-white font-medium"
-    >
-      Next →
-    </button>
-  </div>
-</motion.div>
+      {/* Floating Buttons */}
+      <div className="fixed bottom-6 right-6 z-50 flex gap-3">
+        <button
+          onClick={() => navigate("/")}
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow flex items-center gap-2"
+        >
+          <LogOut size={18} />
+           {/* Logout */}
+        </button>
 
+        <button
+          onClick={() => navigate("/candidate-details")}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-2"
+        >
+          {/* Next  */}
+          <ArrowRightCircle size={18} />
+        </button>
+      </div>
 
       {/* Page Content */}
       <motion.div
@@ -48,7 +52,7 @@ function UploadDocx() {
         transition={{ delay: 0.3, duration: 0.6 }}
         className="flex justify-center items-center py-10 px-4 pt-32"
       >
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-10 w-full max-w-5xl">
+        <div className="bg-white/40 backdrop-blur-sm rounded-2xl shadow-xl p-10 w-full max-w-5xl border border-white/30">
           <h2 className="text-3xl font-semibold text-center text-blue-700 dark:text-blue-400 mb-10">
             Upload Documents
           </h2>
@@ -64,7 +68,8 @@ function UploadDocx() {
             <div className="space-y-6">
               <div>
                 <label className="block font-medium mb-2 flex items-center gap-2">
-                  <ImageUp className="mr-2 h-4 w-4" /> Upload Photo <span className="text-red-500 ml-1">*</span>
+                  <ImageUp className="mr-2 h-4 w-4" /> Upload Photo{" "}
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="file"
@@ -77,7 +82,8 @@ function UploadDocx() {
 
               <div>
                 <label className="block font-medium mb-2 flex items-center gap-2">
-                  <PenLine className="mr-2 h-4 w-4" /> Upload Signature <span className="text-red-500 ml-1">*</span>
+                  <PenLine className="mr-2 h-4 w-4" /> Upload Signature{" "}
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="file"
@@ -93,7 +99,8 @@ function UploadDocx() {
             <div className="space-y-6">
               <div>
                 <label className="block font-medium mb-2 flex items-center gap-2">
-                  <IdCard className="mr-2 h-4 w-4" /> Passport Front Image <span className="text-red-500 ml-1">*</span>
+                  <IdCard className="mr-2 h-4 w-4" /> Passport Front Image{" "}
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="file"
@@ -106,7 +113,8 @@ function UploadDocx() {
 
               <div>
                 <label className="block font-medium mb-2 flex items-center gap-2">
-                  <BadgeHelp className="mr-2 h-4 w-4" /> Passport Back Image <span className="text-red-500 ml-1">*</span>
+                  <BadgeHelp className="mr-2 h-4 w-4" /> Passport Back Image{" "}
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="file"
@@ -128,7 +136,6 @@ function UploadDocx() {
                   type="file"
                   name="cdcImage"
                   accept="image/*"
-                  required
                   className="block w-full text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-xl cursor-pointer focus:outline-none dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 />
               </div>
@@ -141,7 +148,6 @@ function UploadDocx() {
                   type="file"
                   name="marksheet"
                   accept="image/*"
-                  required
                   className="block w-full text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-xl cursor-pointer focus:outline-none dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 />
               </div>
